@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\HasAvatar;
+use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -16,7 +17,7 @@ use Illuminate\Notifications\Notifiable;
 
 
 
-class User extends Authenticatable implements HasAvatar
+class User extends Authenticatable implements HasAvatar, FilamentUser
 {
 
     /** @use HasFactory<UserFactory> */
@@ -39,12 +40,12 @@ protected $hidden = ['password', 'remember_token'];
         ];
     }
 
-    public function canAccessPanel(Panel $panel): bool 
+    public function canAccessPanel(Panel $panel): bool
     {
         return match ($panel->getId()) {
-            'kost'=> $this->role === 'owner_kost' ,
-            'admin' => $this->role === 'admin',
-            default => false,   
+            'admin' => $this->isAdmin(),
+            'kost' => in_array($this->role, ['admin', 'owner_kost', 'user'], true),
+            default => false,
         };
     }
 
@@ -53,15 +54,15 @@ protected $hidden = ['password', 'remember_token'];
         return $this->role === 'admin';
     }
 
-     public function isOwner(): bool
-      {
-            return $this->role === 'owner_kost';
-      }
+    public function isOwner(): bool
+    {
+        return $this->role === 'owner_kost';
+    }
 
-      public function isUser(): bool
-      {
-            return $this->role === 'user';
-      }
+    public function isUser(): bool
+    {
+        return $this->role === 'user';
+    }
 
 
     public function boardingHouses()

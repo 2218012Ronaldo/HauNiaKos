@@ -33,15 +33,15 @@ class BoardingHouse extends Model
     }
 
     public function facilities(){
-        return $this->belongsToMany(facility::class, 'boarding_house_facilities');
+        return $this->belongsToMany(Facility::class, 'boarding_house_facilities');
     }
     
     public function city(){
-        return $this->belongsTo(city::class);
+        return $this->belongsTo(City::class);
     }
 
-      public function category(){
-        return $this->belongsTo(category::class);
+    public function category(){
+        return $this->belongsTo(Category::class);
     }
     
       public function rooms(){

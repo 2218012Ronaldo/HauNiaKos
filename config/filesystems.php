@@ -39,7 +39,7 @@ return [
             'report' => false,
         ],
 
-        'upload_disk' => [
+        'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
