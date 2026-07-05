@@ -51,7 +51,7 @@ return [
         'upload_disk' => [
             'driver' => 'local',
             'root' => base_path('../public_html/storage'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

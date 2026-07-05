@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 
 
@@ -72,7 +73,37 @@ protected $hidden = ['password', 'remember_token'];
 
     public function getFilamentAvatarUrl(): ?string
     {
-    $avatarColumn = config('filament-edit-profile.avatar_column', 'avatar');   
-    return $this->$avatarColumn ? asset('storage/' . $this->$avatarColumn) : null;
+        $avatarColumn = config('filament-edit-profile.avatar_column', 'avatar');
+        $avatar = $this->$avatarColumn;
+
+        if (! $avatar) {
+            return null;
+        }
+
+        $disk = config('filament-edit-profile.disk', 'public');
+
+        $url = Storage::disk($disk)->exists($avatar)
+            ? Storage::disk($disk)->url($avatar)
+            : null;
+
+        if (! $url) {
+            return null;
+        }
+
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            $parsed = parse_url($url);
+            $host = request()?->getHost();
+
+            if ($host && isset($parsed['host']) && $parsed['host'] !== $host) {
+                $relative = $parsed['path'] ?? $url;
+                if (isset($parsed['query'])) {
+                    $relative .= '?'.$parsed['query'];
+                }
+
+                return $relative;
+            }
+        }
+
+        return $url;
     }
 }

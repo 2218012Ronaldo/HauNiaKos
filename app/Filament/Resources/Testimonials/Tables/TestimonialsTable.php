@@ -22,7 +22,7 @@ class TestimonialsTable
             ->columns([
                 TextColumn::make('boardingHouse.name')->label('Boarding House')->searchable(),
                 TextColumn::make('name')->searchable(),
-                ImageColumn::make('photo')->disk('public')->searchable(),
+                ImageColumn::make('photo')->disk(config('filesystems.default_public_disk'))->searchable(),
                 TextColumn::make('rating')->numeric()->sortable(),
                 TextColumn::make('deleted_at')
                     ->dateTime()

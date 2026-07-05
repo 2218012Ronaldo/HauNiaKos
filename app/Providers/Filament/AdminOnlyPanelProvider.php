@@ -45,7 +45,7 @@ class AdminOnlyPanelProvider extends PanelProvider
                     ->shouldShowEditProfileForm(false)
                     ->shouldShowEmailForm()
                     ->shouldShowDeleteAccountForm(true)
-                    ->shouldShowSanctumTokens()
+                    ->shouldShowSanctumTokens(false)
                     ->shouldShowMultiFactorAuthentication()
                     ->shouldShowEditPasswordForm(true)
                     ->shouldShowAvatarForm()

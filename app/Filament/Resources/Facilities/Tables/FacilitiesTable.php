@@ -20,7 +20,7 @@ class FacilitiesTable
             ->columns([
                 TextColumn::make('name')
                     ->searchable(),
-                ImageColumn::make('icon')->disk('public')
+                ImageColumn::make('icon')->disk(config('filesystems.default_public_disk'))
                     ->searchable(),
                 TextColumn::make('weight')
                     ->numeric()
