@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans:
+        "Instrument Sans", ui-sans-serif, system-ui, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Noto Color Emoji";
+
+    --color-ngekos-black: #0f172a;
+    --color-ngekos-grey: #6b7280;
+    --color-ngekos-orange: #f97316;
+    --color-ngekos-green: #91bf77;
+
+    --breakpoint-160: 40rem;
+}
+
+@layer base {
+    body {
+        min-height: 100vh;
+        font-family: "Poppins";
+        background-color: #dae1e9;
+        color: #070707;
+    }
+}
+
+.category-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+}
+
+.category-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* Flatpickr Custom Style */
+.flatpickr-calendar {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.flatpickr-day.selected {
+    background: #91bf77;
+    border-color: #91bf77;
+}

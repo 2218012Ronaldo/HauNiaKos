@@ -1,0 +1,1 @@
+document.addEventListener(`DOMContentLoaded`,()=>{document.querySelectorAll(`.accordion`).forEach(e=>{let t=e.scrollHeight;e.style.height=`${t}px`})});
