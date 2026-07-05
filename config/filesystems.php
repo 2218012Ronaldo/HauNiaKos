@@ -14,6 +14,7 @@ return [
     */
 
     'default' => env('FILESYSTEM_DISK', 'local'),
+    'default_public_disk' => env('PUBLIC_STORAGE_DISK', 'public'),
 
     /*
     |--------------------------------------------------------------------------
@@ -38,9 +39,18 @@ return [
             'report' => false,
         ],
 
-        'public' => [
+        'upload_disk' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'upload_disk' => [
+            'driver' => 'local',
+            'root' => base_path('../public_html/storage'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,

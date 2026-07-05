@@ -16,7 +16,7 @@ class TestimonialsForm
             FileUpload::make('photo')
                 ->required()
                 ->image()
-                ->disk('public')
+                ->disk(config('filesystems.default_public_disk'))
                 ->directory('testimonials')
                 ->imagePreviewHeight('300px')
                 ->columnSpan(2),

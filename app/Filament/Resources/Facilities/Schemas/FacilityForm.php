@@ -15,7 +15,7 @@ class FacilityForm
                 FileUpload::make('icon')
                     ->columnSpan(2)
                     ->required()
-                    ->disk('public')
+                    ->disk(config('filesystems.default_public_disk'))
                     ->directory('facilities')
                     ->maxSize(1024)
                     ->acceptedFileTypes(['image/svg+xml', 'image/png',])

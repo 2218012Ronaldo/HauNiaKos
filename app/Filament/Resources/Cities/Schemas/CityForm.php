@@ -17,7 +17,7 @@ class CityForm
                     ->image()
                     ->columnSpan(2)
                     ->required()
-                    ->disk('public')
+                    ->disk(config('filesystems.default_public_disk'))
                     ->directory('categories')
                     ->imagePreviewHeight('300px'),
                 TextInput::make('name')

@@ -26,7 +26,7 @@ class BoardingHousesTable
                     ->searchable(),
                 TextColumn::make('slug')
                     ->searchable(),
-                ImageColumn::make('thumbnail')->disk('public')
+                ImageColumn::make('thumbnail')->disk(config('filesystems.default_public_disk'))
                     ->searchable(),
                 TextColumn::make('city.name')
                     ->label('City')
