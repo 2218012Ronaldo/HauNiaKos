@@ -34,8 +34,8 @@
                     </div>
                 </div>
             </div>
-            <hr class="border-[#F1F2F6]">
-            <div class="flex gap-4">
+                    <hr class="border-[#F1F2F6]">
+                    <div class="flex gap-4">
                 <div class="flex h-[156px] w-[120px] shrink-0 overflow-hidden rounded-[30px] bg-[#D9D9D9]">
                     <img src="{{ asset('storage/' . (optional($room->roomImages->first())->image ?? 'assets/images/thumbnails/room-1.png')) }}"
                         class="h-full w-full object-cover" alt="icon">
@@ -54,9 +54,10 @@
                         <p class="text-ngekos-grey text-sm">{{ $room->square_feet }} sqft flat</p>
                     </div>
                     <hr class="border-[#F1F2F6]">
-                    <p class="text-ngekos-orange text-lg font-semibold">Rp
-                        {{ number_format($room->price_per_month, 0, ',', '.') }}<span
-                            class="text-ngekos-grey text-sm font-normal">/bulan</span></p>
+                    <p class="text-ngekos-orange text-lg font-semibold">
+                        {{ formatUsd(app(\App\Services\CurrencyService::class)->convertToUsd($room->price_per_month)) }}
+                        <span class="text-ngekos-grey text-sm font-normal">/bulan</span>
+                    </p>
                 </div>
             </div>
         </div>
@@ -190,10 +191,16 @@
             </div>
             <div id="TabContent-Container">
                 @php
-                    $subtotal = $room->price_per_month * $transaction['duration'];
-                    $adminFee = $subtotal * 0.02;
-                    $total = $subtotal + $adminFee;
-                    $downPayment = $total * 0.3;
+                    $subtotal = $room->price_per_month * $transaction['duration']; // IDR
+                    $adminFee = $subtotal * 0.02; // IDR
+                    $total = $subtotal + $adminFee; // IDR
+                    $downPayment = $total * 0.3; // IDR
+
+                    $currencyService = app(\App\Services\CurrencyService::class);
+                    $subtotalUsd = $currencyService->convertToUsd((int) round($subtotal));
+                    $adminFeeUsd = $currencyService->convertToUsd((int) round($adminFee));
+                    $totalUsd = $currencyService->convertToUsd((int) round($total));
+                    $downPaymentUsd = $currencyService->convertToUsd((int) round($downPayment));
                 @endphp
                 <div id="DownPayment-Tab" class="tab-content flex flex-col gap-4">
                     <p class="text-ngekos-grey text-sm">Anda perlu melunasi pembayaran secara cash setelah melakukan
@@ -212,7 +219,7 @@
                                 alt="icon">
                             <p class="text-ngekos-grey">Sub Total</p>
                         </div>
-                        <p class="font-semibold">{{ formatUsd($subtotal) }}</p>
+                        <p class="font-semibold">{{ formatUsd($subtotalUsd) }}</p>
                     </div>
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -220,7 +227,7 @@
                                 class="flex h-6 w-6 shrink-0" alt="icon">
                             <p class="text-ngekos-grey">Admin Fee</p>
                         </div>
-                        <p class="font-semibold">{{ formatUsd($adminFee) }}</p>
+                        <p class="font-semibold">{{ formatUsd($adminFeeUsd) }}</p>
                     </div>
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -228,7 +235,7 @@
                                 alt="icon">
                             <p class="text-ngekos-grey">Grand total (30%)</p>
                         </div>
-                        <p id="downPaymentPrice" class="font-semibold">{{ formatUsd($downPayment) }}</p>
+                        <p id="downPaymentPrice" class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
                     </div>
                 </div>
                 <div id="FullPayment-Tab" class="tab-content flex hidden flex-col gap-4">
@@ -248,7 +255,7 @@
                                 alt="icon">
                             <p class="text-ngekos-grey">Sub Total</p>
                         </div>
-                        <p class="font-semibold">{{ formatUsd($subtotal) }}</p>
+                        <p class="font-semibold">{{ formatUsd($subtotalUsd) }}</p>
                     </div>
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -256,7 +263,7 @@
                                 class="flex h-6 w-6 shrink-0" alt="icon">
                             <p class="text-ngekos-grey">Admin Fee</p>
                         </div>
-                        <p class="font-semibold">{{ formatUsd($adminFee) }}</p>
+                        <p class="font-semibold">{{ formatUsd($adminFeeUsd) }}</p>
                     </div>
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -264,7 +271,7 @@
                                 alt="icon">
                             <p class="text-ngekos-grey">Grand total</p>
                         </div>
-                        <p id="fullPaymentPrice" class="font-semibold">{{ formatUsd($total) }}</p>
+                        <p id="fullPaymentPrice" class="font-semibold">{{ formatUsd($totalUsd) }}</p>
                     </div>
                 </div>
             </div>

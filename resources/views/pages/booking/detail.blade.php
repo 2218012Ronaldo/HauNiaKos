@@ -54,9 +54,10 @@
                         <p class="text-ngekos-grey text-sm">{{ $transaction->room->square_feet }} sqft flat</p>
                     </div>
                     <hr class="border-[#F1F2F6]">
-                    <p class="text-ngekos-orange text-lg font-semibold">Rp
-                        {{ number_format($transaction->room->price_per_month, 0, ',', '.') }}<span
-                            class="text-ngekos-grey text-sm font-normal">/bulan</span></p>
+                    <p class="text-ngekos-orange text-lg font-semibold">
+                        {{ formatUsd(app(\App\Services\CurrencyService::class)->convertToUsd($transaction->room->price_per_month)) }}
+                        <span class="text-ngekos-grey text-sm font-normal">/bulan</span>
+                    </p>
                 </div>
             </div>
         </div>
@@ -155,10 +156,16 @@
         </label>
 
         @php
-            $subtotal = $transaction->room->price_per_month * $transaction->duration;
-            $adminFee = $subtotal * 0.02;
-            $total = $subtotal + $adminFee;
-            $downPayment = $total * 0.3;
+            $subtotal = $transaction->room->price_per_month * $transaction->duration; // amount in IDR
+            $adminFee = $subtotal * 0.02; // IDR
+            $total = $subtotal + $adminFee; // IDR
+            $downPayment = $total * 0.3; // IDR
+
+            $currencyService = app(\App\Services\CurrencyService::class);
+            $subtotalUsd = $currencyService->convertToUsd((int) round($subtotal));
+            $adminFeeUsd = $currencyService->convertToUsd((int) round($adminFee));
+            $totalUsd = $currencyService->convertToUsd((int) round($total));
+            $downPaymentUsd = $currencyService->convertToUsd((int) round($downPayment));
         @endphp
 
         <div class="flex flex-col gap-4 pt-[22px]">
@@ -178,21 +185,21 @@
                     <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
                     <p class="text-ngekos-grey">Kos Price</p>
                 </div>
-                <p class="font-semibold">{{ formatUsd($transaction->room->price_per_month) }}</p>
+                <p class="font-semibold">{{ formatUsd($currencyService->convertToUsd($transaction->room->price_per_month)) }}</p>
             </div>
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
                     <p class="text-ngekos-grey">Sub Total</p>
                 </div>
-                <p class="font-semibold">{{ formatUsd($subtotal) }}</p>
+                <p class="font-semibold">{{ formatUsd($subtotalUsd) }}</p>
             </div>
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <img src="assets/images/icons/receipt-disscount.svg" class="flex h-6 w-6 shrink-0" alt="icon">
                     <p class="text-ngekos-grey">Admin Fee</p>
                 </div>
-                <p class="font-semibold">{{ formatUsd($adminFee) }}</p>
+                <p class="font-semibold">{{ formatUsd($adminFeeUsd) }}</p>
             </div>
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -200,9 +207,9 @@
                     <p class="text-ngekos-grey">Grand total</p>
                 </div>
                 @if ($transaction->payment_method === 'full_payment')
-                    <p class="font-semibold">{{ formatUsd($total) }}</p>
+                    <p class="font-semibold">{{ formatUsd($totalUsd) }}</p>
                 @else
-                    <p class="font-semibold">{{ formatUsd($downPayment) }}</p>
+                    <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
                 @endif
             </div>
             @if ($transaction->payment_status === 'pending')

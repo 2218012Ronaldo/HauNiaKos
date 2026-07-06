@@ -54,7 +54,7 @@
                         <p class="text-ngekos-grey text-sm">{{ $room->square_feet }} sqft flat</p>
                     </div>
                     <hr class="border-[#F1F2F6]">
-                    <p class="text-ngekos-orange text-lg font-semibold">Rp
+                    <p class="text-ngekos-orange text-lg font-semibold">
                         {{ formatUsd($room->price_per_month) }}<span
                             class="text-ngekos-grey text-sm font-normal">/bulan</span></p>
                 </div>
