@@ -47,7 +47,7 @@
                             <img src="assets/images/icons/calendar.svg" class="flex h-5 w-5 shrink-0" alt="icon">
                             <p class="text-ngekos-grey text-sm">
                                 {{ \Carbon\Carbon::parse($transaction->start_date)->isoFormat('D MMMM YYYY') }} -
-                                {{ \Carbon\Carbon::parse($transaction->start_date)->addMonths($transaction->duration)->isoFormat('D MMMM YYYY') }}
+                                {{ \Carbon\Carbon::parse($transaction->start_date)->addMonths((int) $transaction->duration)->isoFormat('D MMMM YYYY') }}
                             </p>
                         </div>
                     </div>
