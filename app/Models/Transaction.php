@@ -45,6 +45,11 @@ class Transaction extends Model
         'transaction_date',
     ];
 
+    protected $casts = [
+        'duration' => 'integer',
+        'start_date' => 'date',
+    ];
+
     // protected static function booted()
     // {
     //     static::saved(function (Transaction $transaction) {

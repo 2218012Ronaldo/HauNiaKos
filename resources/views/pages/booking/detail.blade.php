@@ -55,7 +55,7 @@
                     </div>
                     <hr class="border-[#F1F2F6]">
                     <p class="text-ngekos-orange text-lg font-semibold">
-                        {{ formatUsd(app(\App\Services\CurrencyService::class)->convertToUsd($transaction->room->price_per_month)) }}
+                        {{ formatUsd($transaction->room->price_per_month_usd) }}
                         <span class="text-ngekos-grey text-sm font-normal">/bulan</span>
                     </p>
                 </div>
@@ -162,10 +162,10 @@
             $downPayment = $total * 0.3; // IDR
 
             $currencyService = app(\App\Services\CurrencyService::class);
-            $subtotalUsd = $currencyService->convertToUsd((int) round($subtotal));
-            $adminFeeUsd = $currencyService->convertToUsd((int) round($adminFee));
-            $totalUsd = $currencyService->convertToUsd((int) round($total));
-            $downPaymentUsd = $currencyService->convertToUsd((int) round($downPayment));
+            $subtotalUsd = $currencyService->convertToUsdNormalized($subtotal);
+            $adminFeeUsd = $currencyService->convertToUsdNormalized($adminFee);
+            $totalUsd = $currencyService->convertToUsdNormalized($total);
+            $downPaymentUsd = $currencyService->convertToUsdNormalized($downPayment);
         @endphp
 
         <div class="flex flex-col gap-4 pt-[22px]">
@@ -185,7 +185,7 @@
                     <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
                     <p class="text-ngekos-grey">Kos Price</p>
                 </div>
-                <p class="font-semibold">{{ formatUsd($currencyService->convertToUsd($transaction->room->price_per_month)) }}</p>
+                <p class="font-semibold">{{ formatUsd($transaction->room->price_per_month_usd) }}</p>
             </div>
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">

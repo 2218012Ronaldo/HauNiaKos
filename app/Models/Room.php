@@ -11,12 +11,18 @@ class Room extends Model
     
     use HasFactory, SoftDeletes;
 
-    protected function casts(): array
-    {
-        return [
-            'is_available' => 'boolean',
-        ];
-    }
+    protected $casts = [
+        'price_per_month' => 'float',
+        'square_feet' => 'integer',
+        'capacity' => 'integer',
+        'is_available' => 'boolean',
+    ];
+
+    protected $appends = [
+        'price_per_month_usd',
+    ];
+
+    
 
     protected $fillable = [
         'boarding_house_id',
@@ -43,5 +49,12 @@ class Room extends Model
     public function availabilityLabel(): string
     {
         return $this->is_available ? 'Available' : 'Unavailable';
+    }
+
+    public function getPricePerMonthUsdAttribute(): float
+    {
+        $currencyService = app(\App\Services\CurrencyService::class);
+
+        return $currencyService->convertToUsdNormalized($this->price_per_month);
     }
 }
