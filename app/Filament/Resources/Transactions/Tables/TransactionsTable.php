@@ -47,7 +47,8 @@ class TransactionsTable
                             : null,
                     )->searchable(),
                 TextColumn::make('start_date')->date()->sortable(),
-                TextColumn::make('duration')->numeric()->sortable(),
+                TextColumn::make('duration')->label('Duration (months)')->numeric()->sortable(),
+                TextColumn::make('final_end_date')->label('End Date')->date()->sortable(),
                TextColumn::make('total_amount')
                     ->numeric()
                     ->formatStateUsing(function ($state, $record) {
@@ -57,6 +58,31 @@ class TransactionsTable
                         return '$' . number_format($amount, 2, '.', ',');
                     })
                     ->sortable(),
+                TextColumn::make('is_extension')
+                    ->label('Type')
+                    ->badge()
+                    ->formatStateUsing(function ($state, $record): string {
+                        // Check if it's a completion payment (parent_transaction_id points to itself)
+                        if ($record->parent_transaction_id === $record->id) {
+                            return 'Payment Completion';
+                        }
+                        // Check if it's an extension
+                        if ($record->is_extension) {
+                            return 'Extension';
+                        }
+                        return 'Original';
+                    })
+                    ->color(function ($state, $record): string {
+                        // Check if it's a completion payment
+                        if ($record->parent_transaction_id === $record->id) {
+                            return 'info';
+                        }
+                        // Check if it's an extension
+                        if ($record->is_extension) {
+                            return 'warning';
+                        }
+                        return 'success';
+                    }),
                 TextColumn::make('transaction_date')->date()->sortable(),
                 TextColumn::make('deleted_at')
                     ->dateTime()

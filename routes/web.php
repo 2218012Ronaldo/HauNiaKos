@@ -74,6 +74,11 @@ Route::get('/booking-success', [BookingController::class, 'success'])->name('boo
 Route::get('/check-booking', [BookingController::class, 'check'])->name('check-booking');
 Route::post('/check-booking', [BookingController::class, 'show'])->name('check-booking.show');
 
+Route::get('/booking/{code}/complete-payment', [BookingController::class, 'completePayment'])->name('booking.complete-payment');
+Route::get('/booking/{code}/complete-payment/process', [BookingController::class, 'processCompletionPayment'])->name('booking.complete-payment.process');
+Route::post('/booking/{code}/extend', [BookingController::class, 'processExtension'])->name('booking.extend.process');
+Route::get('/booking/{code}/extend', [BookingController::class, 'showExtensionForm'])->name('booking.extend');
+
 // Maps
 use App\Http\Controllers\GeoProxyController;
 
@@ -87,5 +92,3 @@ Route::middleware('throttle:geocode')->group(function () {
 
 use App\Http\Controllers\TileProxyController;
 Route::get('/tiles/{z}/{x}/{y}.png', [TileProxyController::class, 'tile']);
-
-

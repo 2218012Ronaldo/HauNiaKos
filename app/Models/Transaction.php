@@ -13,15 +13,24 @@ class Transaction extends Model
      protected static function booted(): void
     {
         static::saved(function (Transaction $transaction): void {
-            $transaction->syncRoomAvailability();
+            // Skip room availability sync for extension transactions
+            if (! $transaction->is_extension) {
+                $transaction->syncRoomAvailability();
+            }
         });
 
         static::deleted(function (Transaction $transaction): void {
-            $transaction->syncRoomAvailability();
+            // Skip room availability sync for extension transactions
+            if (! $transaction->is_extension) {
+                $transaction->syncRoomAvailability();
+            }
         });
 
         static::restored(function (Transaction $transaction): void {
-            $transaction->syncRoomAvailability();
+            // Skip room availability sync for extension transactions
+            if (! $transaction->is_extension) {
+                $transaction->syncRoomAvailability();
+            }
         });
     }
 
@@ -43,11 +52,14 @@ class Transaction extends Model
         'duration',
         'total_amount',
         'transaction_date',
+        'parent_transaction_id',
+        'is_extension',
     ];
 
     protected $casts = [
         'duration' => 'integer',
         'start_date' => 'date',
+        'is_extension' => 'boolean',
     ];
 
     // protected static function booted()
@@ -131,5 +143,87 @@ class Transaction extends Model
             'approval_status' => 'rejected',
             'rejected_at' => now(),
         ]);
+    }
+
+    public function getEndDateAttribute()
+    {
+        return \Carbon\Carbon::parse($this->start_date)->addMonths($this->duration);
+    }
+
+    public function canBeExtended(): bool
+    {
+        return $this->isPaid() && 
+               $this->payment_method === 'full_payment' && 
+               $this->getEndDateAttribute()->isFuture();
+    }
+
+    public function getTotalDurationAttribute(): int
+    {
+        // If this is a completion payment (parent_transaction_id == self), return original duration
+        if ($this->parent_transaction_id === $this->id) {
+            return $this->duration;
+        }
+        
+        // If this is an extension, calculate total duration including parent
+        if ($this->is_extension && $this->parent_transaction_id) {
+            $parentTransaction = Transaction::find($this->parent_transaction_id);
+            if ($parentTransaction) {
+                return $parentTransaction->duration + $this->duration;
+            }
+        }
+        
+        // If this has extensions, calculate total duration including all extensions (excluding completion payments)
+        $extensions = Transaction::where('parent_transaction_id', $this->id)
+            ->where('is_extension', true)
+            ->whereColumn('parent_transaction_id', '!=', 'id') // Exclude completion payments
+            ->get();
+        if ($extensions->isNotEmpty()) {
+            $total = $this->duration;
+            foreach ($extensions as $extension) {
+                $total += $extension->duration;
+            }
+            return $total;
+        }
+        
+        // Return current duration if no extensions
+        return $this->duration;
+    }
+
+    public function getFinalEndDateAttribute()
+    {
+        // If this is an extension, return its own end date
+        if ($this->is_extension) {
+            return $this->getEndDateAttribute();
+        }
+        
+        // If this is an original booking, return its own end date (not including extensions)
+        // This ensures the owner sees the original booking period
+        return $this->getEndDateAttribute();
+    }
+
+    public function canCompletePayment(): bool
+    {
+        $canComplete = $this->payment_method === 'down_payment' && 
+                       $this->isApproved();
+        
+        \Log::info('canCompletePayment check', [
+            'transaction_code' => $this->code,
+            'payment_method' => $this->payment_method,
+            'payment_status' => $this->payment_status,
+            'is_approved' => $this->isApproved(),
+            'can_complete' => $canComplete
+        ]);
+        
+        return $canComplete;
+    }
+
+    public function getRemainingPaymentAmount(): float
+    {
+        if ($this->payment_method !== 'down_payment') {
+            return 0;
+        }
+        
+        // Down payment is 30%, remaining is 70%
+        return $this->total_amount * 0.7;
     }
 }

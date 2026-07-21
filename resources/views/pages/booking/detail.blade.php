@@ -102,139 +102,716 @@
             </div>
         </div>
     </div>
-    <div
-        class="accordion group mx-5 mt-5 flex flex-col overflow-hidden rounded-[30px] bg-[#F5F6F8] p-5 transition-all duration-300 has-[:checked]:!h-[68px]">
-        <label class="relative flex items-center justify-between">
-            <p class="text-lg font-semibold">Booking</p>
-            <img src="assets/images/icons/arrow-up.svg"
-                class="flex h-[28px] w-[28px] shrink-0 transition-all duration-300 group-has-[:checked]:rotate-180"
-                alt="icon">
-            <input type="checkbox" class="absolute hidden">
-        </label>
-        <div class="flex flex-col gap-4 pt-[22px]">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                    <p class="text-ngekos-grey">Booking ID</p>
-                </div>
-                <p class="font-semibold">{{ $transaction->code }}</p>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="assets/images/icons/clock.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                    <p class="text-ngekos-grey">Duration</p>
-                </div>
-                <p class="font-semibold">{{ $transaction->duration }} Months</p>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                    <p class="text-ngekos-grey">Started At</p>
-                </div>
-                <p class="font-semibold">{{ \Carbon\Carbon::parse($transaction->start_date)->isoFormat('D MMMM YYYY') }}
-                </p>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                    <p class="text-ngekos-grey">Ended At</p>
-                </div>
-                <p class="font-semibold">
-                    {{ \Carbon\Carbon::parse($transaction->start_date)->addMonths(intval($transaction->duration))->isoFormat('D MMMM YYYY') }}
-                </p>
-            </div>
-        </div>
-    </div>
-    <div
-        class="accordion group mx-5 mt-5 flex flex-col overflow-hidden rounded-[30px] bg-[#F5F6F8] p-5 transition-all duration-300 has-[:checked]:!h-[68px]">
-        <label class="relative flex items-center justify-between">
-            <p class="text-lg font-semibold">Payment</p>
-            <img src="assets/images/icons/arrow-up.svg"
-                class="flex h-[28px] w-[28px] shrink-0 transition-all duration-300 group-has-[:checked]:rotate-180"
-                alt="icon">
-            <input type="checkbox" class="absolute hidden">
-        </label>
+    @php
+        // Initialize variables
+        $originalTransaction = null;
+        $extensions = collect();
+        $currentExtension = null;
 
-        @php
-            $subtotal = $transaction->room->price_per_month * $transaction->duration; // amount in IDR
-            $adminFee = $subtotal * 0.02; // IDR
-            $total = $subtotal + $adminFee; // IDR
-            $downPayment = $total * 0.3; // IDR
+        // Get the original transaction (parent) and all extensions
+        if ($transaction->is_extension) {
+            // For extension transactions, find the original transaction
+            if ($transaction->parent_transaction_id && $transaction->parent_transaction_id !== $transaction->id) {
+                $originalTransaction = \App\Models\Transaction::find($transaction->parent_transaction_id);
+            }
 
-            $currencyService = app(\App\Services\CurrencyService::class);
-            $subtotalUsd = $currencyService->convertToUsdNormalized($subtotal);
-            $adminFeeUsd = $currencyService->convertToUsdNormalized($adminFee);
-            $totalUsd = $currencyService->convertToUsdNormalized($total);
-            $downPaymentUsd = $currencyService->convertToUsdNormalized($downPayment);
-        @endphp
+            // If parent not found or is self, find the original by searching
+            if (! $originalTransaction) {
+                $originalTransaction = \App\Models\Transaction::where('id', '!=', $transaction->id)
+                    ->where('boarding_house_id', $transaction->boarding_house_id)
+                    ->where('room_id', $transaction->room_id)
+                    ->where('user_id', $transaction->user_id)
+                    ->where('is_extension', false)
+                    ->orderBy('created_at', 'asc')
+                    ->first();
+            }
 
-        <div class="flex flex-col gap-4 pt-[22px]">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="assets/images/icons/card-tick.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                    <p class="text-ngekos-grey">Payment</p>
-                </div>
-                @if ($transaction->payment_method === 'full_payment')
-                    <p class="font-semibold">Full Payment 100%</p>
-                @else
-                    <p class="font-semibold">Down Payment 30%</p>
-                @endif
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                    <p class="text-ngekos-grey">Kos Price</p>
-                </div>
-                <p class="font-semibold">{{ formatUsd($transaction->room->price_per_month_usd) }}</p>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                    <p class="text-ngekos-grey">Sub Total</p>
-                </div>
-                <p class="font-semibold">{{ formatUsd($subtotalUsd) }}</p>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="assets/images/icons/receipt-disscount.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                    <p class="text-ngekos-grey">Admin Fee</p>
-                </div>
-                <p class="font-semibold">{{ formatUsd($adminFeeUsd) }}</p>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                    <p class="text-ngekos-grey">Grand total</p>
-                </div>
-                @if ($transaction->payment_method === 'full_payment')
-                    <p class="font-semibold">{{ formatUsd($totalUsd) }}</p>
-                @else
-                    <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
-                @endif
-            </div>
-            @if ($transaction->payment_status === 'pending')
+            // Get all extensions for the original transaction
+            $extensions = $originalTransaction ?
+                \App\Models\Transaction::where('parent_transaction_id', $originalTransaction->id)->where('is_extension', true)->get() :
+                collect();
+
+            // Current extension being viewed
+            $currentExtension = $transaction;
+
+            \Log::info('Booking detail view - extension transaction', [
+                'current_transaction_id' => $transaction->id,
+                'current_transaction_code' => $transaction->code,
+                'current_start_date' => $transaction->start_date,
+                'current_duration' => $transaction->duration,
+                'original_transaction_id' => $originalTransaction ? $originalTransaction->id : 'not found',
+                'original_transaction_code' => $originalTransaction ? $originalTransaction->code : 'not found',
+                'original_start_date' => $originalTransaction ? $originalTransaction->start_date : 'not found',
+                'original_duration' => $originalTransaction ? $originalTransaction->duration : 'not found',
+            ]);
+        } else {
+            // For original transactions (including completion payments)
+            $originalTransaction = $transaction;
+            $extensions = \App\Models\Transaction::where('parent_transaction_id', $transaction->id)->where('is_extension', true)->get();
+            $currentExtension = null;
+
+            \Log::info('Booking detail view - original transaction', [
+                'transaction_id' => $transaction->id,
+                'transaction_code' => $transaction->code,
+                'start_date' => $transaction->start_date,
+                'duration' => $transaction->duration,
+                'extensions_count' => $extensions->count(),
+            ]);
+        }
+    @endphp
+
+    @if ($transaction->is_extension && $originalTransaction)
+        <div
+            class="accordion group mx-5 mt-5 flex flex-col overflow-hidden rounded-[30px] bg-[#F5F6F8] p-5 transition-all duration-300 has-[:checked]:!h-[68px]">
+            <label class="relative flex items-center justify-between">
+                <p class="text-lg font-semibold">Original Booking</p>
+                <img src="assets/images/icons/arrow-up.svg"
+                    class="flex h-[28px] w-[28px] shrink-0 transition-all duration-300 group-has-[:checked]:rotate-180"
+                    alt="icon">
+                <input type="checkbox" class="absolute hidden">
+            </label>
+            <div class="flex flex-col gap-4 pt-[22px]">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <img src="assets/images/icons/security-card.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                        <p class="text-ngekos-grey">Status</p>
+                        <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Booking ID</p>
                     </div>
-                    <p class="bg-ngekos-orange rounded-full p-[6px_12px] text-xs font-bold leading-[18px]">PENDING</p>
+                    <p class="font-semibold">{{ $originalTransaction->code }}</p>
                 </div>
-            @else
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <img src="assets/images/icons/security-card.svg" class="flex h-6 w-6 shrink-0" alt="icon">
-                        <p class="text-ngekos-grey">Status</p>
+                        <img src="assets/images/icons/clock.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Duration</p>
                     </div>
-                    <p class="rounded-full bg-[#91BF77] p-[6px_12px] text-xs font-bold leading-[18px]">SUCCESSFUL PAID</p>
+                    <p class="font-semibold">{{ $originalTransaction->duration }} Months</p>
                 </div>
-            @endif
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Started At</p>
+                    </div>
+                    <p class="font-semibold">{{ \Carbon\Carbon::parse($originalTransaction->start_date)->isoFormat('D MMMM YYYY') }}
+                    </p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Ended At</p>
+                    </div>
+                    <p class="font-semibold">
+                        {{ \Carbon\Carbon::parse($originalTransaction->start_date)->addMonths(intval($originalTransaction->duration))->isoFormat('D MMMM YYYY') }}
+                    </p>
+                </div>
+                
+                @php
+                    $subtotal = $originalTransaction->room->price_per_month * $originalTransaction->duration;
+                    $adminFee = $subtotal * 0.02;
+                    $total = $subtotal + $adminFee;
+                    $downPayment = $total * 0.3;
+
+                    $currencyService = app(\App\Services\CurrencyService::class);
+                    $subtotalUsd = $currencyService->convertToUsdNormalized($subtotal);
+                    $adminFeeUsd = $currencyService->convertToUsdNormalized($adminFee);
+                    $totalUsd = $currencyService->convertToUsdNormalized($total);
+                    $downPaymentUsd = $currencyService->convertToUsdNormalized($downPayment);
+                @endphp
+                
+                <div class="mt-4 border-t border-gray-300 pt-4">
+                    <p class="mb-3 font-semibold">Payment</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/card-tick.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Payment</p>
+                        </div>
+                        @if ($originalTransaction->payment_method === 'full_payment')
+                            <p class="font-semibold">Full Payment 100%</p>
+                        @else
+                            <p class="font-semibold">Down Payment 30%</p>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Sub Total</p>
+                        </div>
+                        <p class="font-semibold">{{ formatUsd($subtotalUsd) }}</p>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/receipt-disscount.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Admin Fee</p>
+                        </div>
+                        <p class="font-semibold">{{ formatUsd($adminFeeUsd) }}</p>
+                    </div>
+                    @if ($originalTransaction->payment_method === 'down_payment')
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Down Payment (30%)</p>
+                            </div>
+                            <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Remaining Payment (70%)</p>
+                            </div>
+                            <p class="font-semibold">{{ formatUsd($totalUsd - $downPaymentUsd) }}</p>
+                        </div>
+                    @endif
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Grand total</p>
+                        </div>
+                        @if ($originalTransaction->payment_method === 'full_payment')
+                            <p class="font-semibold">{{ formatUsd($totalUsd) }}</p>
+                        @else
+                            <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/security-card.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Status</p>
+                        </div>
+                        @if ($originalTransaction->payment_status === 'pending')
+                            <p class="bg-ngekos-orange rounded-full p-[6px_12px] text-xs font-bold leading-[18px]">PENDING</p>
+                        @else
+                            <p class="rounded-full bg-[#91BF77] p-[6px_12px] text-xs font-bold leading-[18px]">SUCCESSFUL PAID</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+
+        @if ($extensions->count() > 0 && $currentExtension)
+            @foreach ($extensions as $extension)
+                @if ($extension->id !== $currentExtension->id)
+                    <div
+                        class="accordion group mx-5 mt-5 flex flex-col overflow-hidden rounded-[30px] bg-[#F5F6F8] p-5 transition-all duration-300 has-[:checked]:!h-[68px]">
+                        <label class="relative flex items-center justify-between">
+                            <p class="text-lg font-semibold">Extension #{{ $loop->iteration }}</p>
+                            <img src="assets/images/icons/arrow-up.svg"
+                                class="flex h-[28px] w-[28px] shrink-0 transition-all duration-300 group-has-[:checked]:rotate-180"
+                                alt="icon">
+                            <input type="checkbox" class="absolute hidden">
+                        </label>
+                        <div class="flex flex-col gap-4 pt-[22px]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                    <p class="text-ngekos-grey">Booking ID</p>
+                                </div>
+                                <p class="font-semibold">{{ $extension->code }}</p>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="assets/images/icons/clock.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                    <p class="text-ngekos-grey">Duration</p>
+                                </div>
+                                <p class="font-semibold">{{ $extension->duration }} Months</p>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                    <p class="text-ngekos-grey">Started At</p>
+                                </div>
+                                <p class="font-semibold">{{ \Carbon\Carbon::parse($extension->start_date)->isoFormat('D MMMM YYYY') }}
+                                </p>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                    <p class="text-ngekos-grey">Ended At</p>
+                                </div>
+                                <p class="font-semibold">
+                                    {{ \Carbon\Carbon::parse($extension->start_date)->addMonths(intval($extension->duration))->isoFormat('D MMMM YYYY') }}
+                                </p>
+                            </div>
+                            
+                            @php
+                                $subtotal = $extension->room->price_per_month * $extension->duration;
+                                $adminFee = $subtotal * 0.02;
+                                $total = $subtotal + $adminFee;
+                                $downPayment = $total * 0.3;
+
+                                $currencyService = app(\App\Services\CurrencyService::class);
+                                $subtotalUsd = $currencyService->convertToUsdNormalized($subtotal);
+                                $adminFeeUsd = $currencyService->convertToUsdNormalized($adminFee);
+                                $totalUsd = $currencyService->convertToUsdNormalized($total);
+                                $downPaymentUsd = $currencyService->convertToUsdNormalized($downPayment);
+                            @endphp
+                            
+                            <div class="mt-4 border-t border-gray-300 pt-4">
+                                <p class="mb-3 font-semibold">Payment</p>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <img src="assets/images/icons/card-tick.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                        <p class="text-ngekos-grey">Payment</p>
+                                    </div>
+                                    @if ($extension->payment_method === 'full_payment')
+                                        <p class="font-semibold">Full Payment 100%</p>
+                                    @else
+                                        <p class="font-semibold">Down Payment 30%</p>
+                                    @endif
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                        <p class="text-ngekos-grey">Sub Total</p>
+                                    </div>
+                                    <p class="font-semibold">{{ formatUsd($subtotalUsd) }}</p>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <img src="assets/images/icons/receipt-disscount.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                        <p class="text-ngekos-grey">Admin Fee</p>
+                                    </div>
+                                    <p class="font-semibold">{{ formatUsd($adminFeeUsd) }}</p>
+                                </div>
+                                @if ($extension->payment_method === 'down_payment')
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                            <p class="text-ngekos-grey">Down Payment (30%)</p>
+                                        </div>
+                                        <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                            <p class="text-ngekos-grey">Remaining Payment (70%)</p>
+                                        </div>
+                                        <p class="font-semibold">{{ formatUsd($totalUsd - $downPaymentUsd) }}</p>
+                                    </div>
+                                @endif
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                        <p class="text-ngekos-grey">Grand total</p>
+                                    </div>
+                                    @if ($extension->payment_method === 'full_payment')
+                                        <p class="font-semibold">{{ formatUsd($totalUsd) }}</p>
+                                    @else
+                                        <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                                    @endif
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <img src="assets/images/icons/security-card.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                        <p class="text-ngekos-grey">Status</p>
+                                    </div>
+                                    @if ($extension->payment_status === 'pending')
+                                        <p class="bg-ngekos-orange rounded-full p-[6px_12px] text-xs font-bold leading-[18px]">PENDING</p>
+                                    @else
+                                        <p class="rounded-full bg-[#91BF77] p-[6px_12px] text-xs font-bold leading-[18px]">SUCCESSFUL PAID</p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            @endforeach
+        @endif
+
+        @if ($currentExtension)
+            <div
+                class="accordion group mx-5 mt-5 flex flex-col overflow-hidden rounded-[30px] bg-[#F5F6F8] p-5 transition-all duration-300 has-[:checked]:!h-[68px]">
+                <label class="relative flex items-center justify-between">
+                    <p class="text-lg font-semibold">Extension Booking (Current)</p>
+                    <img src="assets/images/icons/arrow-up.svg"
+                        class="flex h-[28px] w-[28px] shrink-0 transition-all duration-300 group-has-[:checked]:rotate-180"
+                        alt="icon">
+                    <input type="checkbox" class="absolute hidden">
+                </label>
+                <div class="flex flex-col gap-4 pt-[22px]">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Booking ID</p>
+                        </div>
+                        <p class="font-semibold">{{ $currentExtension->code }}</p>
+                    </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="assets/images/icons/clock.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Duration</p>
+                    </div>
+                    <p class="font-semibold">{{ $currentExtension->duration }} Months</p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Started At</p>
+                    </div>
+                    <p class="font-semibold">{{ \Carbon\Carbon::parse($currentExtension->start_date)->isoFormat('D MMMM YYYY') }}
+                    </p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Ended At</p>
+                    </div>
+                    <p class="font-semibold">
+                        {{ \Carbon\Carbon::parse($currentExtension->start_date)->addMonths(intval($currentExtension->duration))->isoFormat('D MMMM YYYY') }}
+                    </p>
+                </div>
+                
+                @php
+                    $subtotal = $currentExtension->room->price_per_month * $currentExtension->duration;
+                    $adminFee = $subtotal * 0.02;
+                    $total = $subtotal + $adminFee;
+                    $downPayment = $total * 0.3;
+
+                    $currencyService = app(\App\Services\CurrencyService::class);
+                    $subtotalUsd = $currencyService->convertToUsdNormalized($subtotal);
+                    $adminFeeUsd = $currencyService->convertToUsdNormalized($adminFee);
+                    $totalUsd = $currencyService->convertToUsdNormalized($total);
+                    $downPaymentUsd = $currencyService->convertToUsdNormalized($downPayment);
+                @endphp
+                
+                <div class="mt-4 border-t border-gray-300 pt-4">
+                    <p class="mb-3 font-semibold">Payment</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/card-tick.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Payment</p>
+                        </div>
+                        @if ($currentExtension->payment_method === 'full_payment')
+                            <p class="font-semibold">Full Payment 100%</p>
+                        @else
+                            <p class="font-semibold">Down Payment 30%</p>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Sub Total</p>
+                        </div>
+                        <p class="font-semibold">{{ formatUsd($subtotalUsd) }}</p>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/receipt-disscount.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Admin Fee</p>
+                        </div>
+                        <p class="font-semibold">{{ formatUsd($adminFeeUsd) }}</p>
+                    </div>
+                    @if ($currentExtension->payment_method === 'down_payment')
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Down Payment (30%)</p>
+                            </div>
+                            <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Remaining Payment (70%)</p>
+                            </div>
+                            <p class="font-semibold">{{ formatUsd($totalUsd - $downPaymentUsd) }}</p>
+                        </div>
+                    @endif
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Grand total</p>
+                        </div>
+                        @if ($currentExtension->payment_method === 'full_payment')
+                            <p class="font-semibold">{{ formatUsd($totalUsd) }}</p>
+                        @else
+                            <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/security-card.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Status</p>
+                        </div>
+                        @if ($currentExtension->payment_status === 'pending')
+                            <p class="bg-ngekos-orange rounded-full p-[6px_12px] text-xs font-bold leading-[18px]">PENDING</p>
+                        @else
+                            <p class="rounded-full bg-[#91BF77] p-[6px_12px] text-xs font-bold leading-[18px]">SUCCESSFUL PAID</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+    @else
+        <div
+            class="accordion group mx-5 mt-5 flex flex-col overflow-hidden rounded-[30px] bg-[#F5F6F8] p-5 transition-all duration-300 has-[:checked]:!h-[68px]">
+            <label class="relative flex items-center justify-between">
+                <p class="text-lg font-semibold">Booking</p>
+                <img src="assets/images/icons/arrow-up.svg"
+                    class="flex h-[28px] w-[28px] shrink-0 transition-all duration-300 group-has-[:checked]:rotate-180"
+                    alt="icon">
+                <input type="checkbox" class="absolute hidden">
+            </label>
+            <div class="flex flex-col gap-4 pt-[22px]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Booking ID</p>
+                    </div>
+                    <p class="font-semibold">{{ $transaction->code }}</p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="assets/images/icons/clock.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Duration</p>
+                    </div>
+                    <p class="font-semibold">{{ $transaction->duration }} Months</p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Started At</p>
+                    </div>
+                    <p class="font-semibold">{{ \Carbon\Carbon::parse($transaction->start_date)->isoFormat('D MMMM YYYY') }}
+                    </p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                        <p class="text-ngekos-grey">Ended At</p>
+                    </div>
+                    <p class="font-semibold">
+                        {{ \Carbon\Carbon::parse($transaction->start_date)->addMonths(intval($transaction->duration))->isoFormat('D MMMM YYYY') }}
+                    </p>
+                </div>
+                
+                @php
+                    $subtotal = $transaction->room->price_per_month * $transaction->duration;
+                    $adminFee = $subtotal * 0.02;
+                    $total = $subtotal + $adminFee;
+                    $downPayment = $total * 0.3;
+
+                    $currencyService = app(\App\Services\CurrencyService::class);
+                    $subtotalUsd = $currencyService->convertToUsdNormalized($subtotal);
+                    $adminFeeUsd = $currencyService->convertToUsdNormalized($adminFee);
+                    $totalUsd = $currencyService->convertToUsdNormalized($total);
+                    $downPaymentUsd = $currencyService->convertToUsdNormalized($downPayment);
+                @endphp
+                
+                <div class="mt-4 border-t border-gray-300 pt-4">
+                    <p class="mb-3 font-semibold">Payment</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/card-tick.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Payment</p>
+                        </div>
+                        @if ($transaction->payment_method === 'full_payment')
+                            <p class="font-semibold">Full Payment 100%</p>
+                        @else
+                            <p class="font-semibold">Down Payment 30%</p>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Sub Total</p>
+                        </div>
+                        <p class="font-semibold">{{ formatUsd($subtotalUsd) }}</p>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/receipt-disscount.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Admin Fee</p>
+                        </div>
+                        <p class="font-semibold">{{ formatUsd($adminFeeUsd) }}</p>
+                    </div>
+                    @if ($transaction->payment_method === 'down_payment')
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Down Payment (30%)</p>
+                            </div>
+                            <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Remaining Payment (70%)</p>
+                            </div>
+                            <p class="font-semibold">{{ formatUsd($totalUsd - $downPaymentUsd) }}</p>
+                        </div>
+                    @endif
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Grand total</p>
+                        </div>
+                        @if ($transaction->payment_method === 'full_payment')
+                            <p class="font-semibold">{{ formatUsd($totalUsd) }}</p>
+                        @else
+                            <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="assets/images/icons/security-card.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                            <p class="text-ngekos-grey">Status</p>
+                        </div>
+                        @if ($transaction->payment_status === 'pending')
+                            <p class="bg-ngekos-orange rounded-full p-[6px_12px] text-xs font-bold leading-[18px]">PENDING</p>
+                        @else
+                            <p class="rounded-full bg-[#91BF77] p-[6px_12px] text-xs font-bold leading-[18px]">SUCCESSFUL PAID</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if ($extensions->count() > 0)
+            @foreach ($extensions as $extension)
+                <div
+                    class="accordion group mx-5 mt-5 flex flex-col overflow-hidden rounded-[30px] bg-[#F5F6F8] p-5 transition-all duration-300 has-[:checked]:!h-[68px]">
+                    <label class="relative flex items-center justify-between">
+                        <p class="text-lg font-semibold">Extension #{{ $loop->iteration }}</p>
+                        <img src="assets/images/icons/arrow-up.svg"
+                            class="flex h-[28px] w-[28px] shrink-0 transition-all duration-300 group-has-[:checked]:rotate-180"
+                            alt="icon">
+                        <input type="checkbox" class="absolute hidden">
+                    </label>
+                    <div class="flex flex-col gap-4 pt-[22px]">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Booking ID</p>
+                            </div>
+                            <p class="font-semibold">{{ $extension->code }}</p>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/clock.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Duration</p>
+                            </div>
+                            <p class="font-semibold">{{ $extension->duration }} Months</p>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Started At</p>
+                            </div>
+                            <p class="font-semibold">{{ \Carbon\Carbon::parse($extension->start_date)->isoFormat('D MMMM YYYY') }}
+                            </p>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="assets/images/icons/calendar.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                <p class="text-ngekos-grey">Ended At</p>
+                            </div>
+                            <p class="font-semibold">
+                                {{ \Carbon\Carbon::parse($extension->start_date)->addMonths(intval($extension->duration))->isoFormat('D MMMM YYYY') }}
+                            </p>
+                        </div>
+                        
+                        @php
+                            $subtotal = $extension->room->price_per_month * $extension->duration;
+                            $adminFee = $subtotal * 0.02;
+                            $total = $subtotal + $adminFee;
+                            $downPayment = $total * 0.3;
+
+                            $currencyService = app(\App\Services\CurrencyService::class);
+                            $subtotalUsd = $currencyService->convertToUsdNormalized($subtotal);
+                            $adminFeeUsd = $currencyService->convertToUsdNormalized($adminFee);
+                            $totalUsd = $currencyService->convertToUsdNormalized($total);
+                            $downPaymentUsd = $currencyService->convertToUsdNormalized($downPayment);
+                        @endphp
+                        
+                        <div class="mt-4 border-t border-gray-300 pt-4">
+                            <p class="mb-3 font-semibold">Payment</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="assets/images/icons/card-tick.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                    <p class="text-ngekos-grey">Payment</p>
+                                </div>
+                                @if ($extension->payment_method === 'full_payment')
+                                    <p class="font-semibold">Full Payment 100%</p>
+                                @else
+                                    <p class="font-semibold">Down Payment 30%</p>
+                                @endif
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="assets/images/icons/receipt-2.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                    <p class="text-ngekos-grey">Sub Total</p>
+                                </div>
+                                <p class="font-semibold">{{ formatUsd($subtotalUsd) }}</p>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="assets/images/icons/receipt-disscount.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                    <p class="text-ngekos-grey">Admin Fee</p>
+                                </div>
+                                <p class="font-semibold">{{ formatUsd($adminFeeUsd) }}</p>
+                            </div>
+                            @if ($extension->payment_method === 'down_payment')
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                        <p class="text-ngekos-grey">Down Payment (30%)</p>
+                                    </div>
+                                    <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                        <p class="text-ngekos-grey">Remaining Payment (70%)</p>
+                                    </div>
+                                    <p class="font-semibold">{{ formatUsd($totalUsd - $downPaymentUsd) }}</p>
+                                </div>
+                            @endif
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="assets/images/icons/receipt-text.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                    <p class="text-ngekos-grey">Grand total</p>
+                                </div>
+                                @if ($extension->payment_method === 'full_payment')
+                                    <p class="font-semibold">{{ formatUsd($totalUsd) }}</p>
+                                @else
+                                    <p class="font-semibold">{{ formatUsd($downPaymentUsd) }}</p>
+                                @endif
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="assets/images/icons/security-card.svg" class="flex h-6 w-6 shrink-0" alt="icon">
+                                    <p class="text-ngekos-grey">Status</p>
+                                </div>
+                                @if ($extension->payment_status === 'pending')
+                                    <p class="bg-ngekos-orange rounded-full p-[6px_12px] text-xs font-bold leading-[18px]">PENDING</p>
+                                @else
+                                    <p class="rounded-full bg-[#91BF77] p-[6px_12px] text-xs font-bold leading-[18px]">SUCCESSFUL PAID</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        @endif
+    @endif
 
     <div class="mx-5 mt-3">
         <div class="mx-auto w-full max-w-[640px]">
-            <div class="flex items-center justify-center rounded-[30px] p-5">
+            <div class="flex flex-col items-center gap-3 rounded-[30px] p-5">
+                @if ($transaction->canCompletePayment())
+                    <form action="{{ route('booking.complete-payment', $transaction->code) }}" method="GET" class="w-full max-w-[520px]">
+                        <button type="submit"
+                            class="cursor-pointer bg-emerald-500 block w-full rounded-full px-6 py-3 text-center font-bold text-white shadow-lg">
+                            Complete Payment
+                        </button>
+                    </form>
+                @elseif ($transaction->canBeExtended())
+                    <form action="{{ route('booking.extend', $transaction->code) }}" method="GET" class="w-full max-w-[520px]">
+                        <button type="submit"
+                            class="cursor-pointer bg-emerald-500 block w-full rounded-full px-6 py-3 text-center font-bold text-white shadow-lg">
+                            Extend Booking
+                        </button>
+                    </form>
+                @endif
                 <a href="#"
                     class="bg-ngekos-orange block w-full max-w-[520px] rounded-full px-6 py-3 text-center font-bold text-white shadow-lg">
                     Contact Customer Service
